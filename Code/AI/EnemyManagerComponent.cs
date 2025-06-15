@@ -1,47 +1,55 @@
 using Sandbox;
+using System.Collections.Generic;
+using System.Linq;
 
+[Title( "Enemy Manager" )]
+[Category( "Managers" )]
 public sealed class EnemyManagerComponent : Component
 {
-	[Property] public SpawnerComponent Spawner { get; set; }
+	// Zombie prefabs and spawn points
+	[Property] public List<GameObject> SpawnPrefabs { get; set; } = new();
+	[Property] public List<GameObject> SpawnPoints { get; set; } = new();
 
-	[Property] public int EnemiesPerFloor { get; set; } = 5;
-	[Property] public int EnemyIncrementPerFloor { get; set; } = 2;
+	[Property] public int MaxEnemies = 10;
+	[Property] public float SpawnInterval = 5f;
 
-	[Property] public float EnemySpeedIncrement { get; set; } = 20f;
-
-	public int currentFloor { get; private set; } = 1; 
+	private TimeUntil _nextSpawnTime;
+	private List<GameObject> ActiveEnemies = new();
 
 	protected override void OnStart()
 	{
-		SpawnFloor();
+		_nextSpawnTime = 0f;
 	}
 
 	protected override void OnUpdate()
 	{
-		var enemies = Scene.GetAllComponents<EnemyComponent>().ToList();
+		CleanDeadEnemies();
 
-		if ( enemies.Count == 0 )
-		{
-			Log.Info( $"Floor {currentFloor} cleared!" );
-			currentFloor++;
-			SpawnFloor();
-		}
+		if ( ActiveEnemies.Count >= MaxEnemies )
+			return;
+
+		if ( _nextSpawnTime > 0 )
+			return;
+
+		SpawnEnemy();
+		_nextSpawnTime = SpawnInterval;
 	}
 
-	private void SpawnFloor()
+	private void SpawnEnemy()
 	{
-		int totalEnemies = EnemiesPerFloor + (EnemyIncrementPerFloor * (currentFloor - 1));
+		if ( SpawnPrefabs.Count == 0 || SpawnPoints.Count == 0 )
+			return;
 
-		for ( int i = 0; i < totalEnemies; i++ )
-		{
-			var offset = Vector3.Random * 10f;
-			offset.z = 0;
+		// Pick random prefab & spawn point
+		var prefab = Game.Random.FromList( SpawnPrefabs );
+		var spawnPoint = Game.Random.FromList( SpawnPoints );
 
-			/*var enemy = Spawner.EnemyPrefab.Clone( Spawner.Transform.Position + offset );
-			var enemyAI = enemy.Components.Get<EnemyComponent>();
-			enemyAI.MoveSpeed = enemySpeed;*/
-		}
+		var enemy = prefab.Clone( spawnPoint.WorldPosition, spawnPoint.WorldRotation );
+		ActiveEnemies.Add( enemy );
+	}
 
-		Log.Info( $"Spawning Floor {currentFloor}: {totalEnemies}" );
+	private void CleanDeadEnemies()
+	{
+		ActiveEnemies.RemoveAll( e => !e.IsValid() );
 	}
 }
