@@ -2,10 +2,12 @@ using Sandbox;
 
 [Title( "Enemy Base" )]
 [Category( "AI" )]
-public abstract class BaseEnemyComponent : Component
+public class EnemyBaseComponent : Component
 {
 	[Property] public float MaxHealth { get; set; } = 100f;
 	[Property] public float MoveSpeed { get; set; } = 150f;
+
+	[Property] public float AttackForce { get; set; } = 50f;
 
 	protected float CurrentHealth;
 	protected GameObject Player;
